@@ -1,0 +1,163 @@
+---
+title: "PC1"
+author: "Rolando Menesese"
+date: "18/9/2021"
+output: html_document
+---
+
+1. Import data desde tablas y no tablas
+
+# . 'Scraping' tablas de datos**
+
+Hemos aprendido a bajar información programáticamente de las páginas web usando las técnicas de "scraping".
+
+## Opción 1
+
+Cuando las tablas han sido programadas como tales por los desarrolladores web.
+  Vamos a extraer una tabla sobre ataques terroristas: <https://es.wikipedia.org/wiki/Periodo_parlamentario_2021-2026_del_Congreso_de_la_Rep%C3%BAblica_del_Per%C3%BA#Grupos_parlamentarios>
+
+Procedemos: 
+
+#Data acerca de la distrubición entre partidos políticos de los escaños del Congreso de la República
+```{r}
+library(htmltab)
+link= "https://es.wikipedia.org/wiki/Periodo_parlamentario_2021-2026_del_Congreso_de_la_Rep%C3%BAblica_del_Per%C3%BA#Grupos_parlamentarios"
+path="/html/body/div[3]/div[3]/div[5]/div[1]/center"
+dataWS1 = htmltab(link, path)
+head(dataWS1)
+```
+#Data acerca de la conformación de la Mesa Directiva
+```{r}
+link= "https://es.wikipedia.org/wiki/Periodo_parlamentario_2021-2026_del_Congreso_de_la_Rep%C3%BAblica_del_Per%C3%BA#Mesa_Directiva_del_Congreso_(2021-2022)"
+path="/html/body/div[3]/div[3]/div[5]/div[1]/table[4]"
+dataWS2 = htmltab(link, path)
+head(dataWS2)
+```
+#Data acerca de las votaciones respecto al voto de confianza del gabinete Bellido
+```{r}
+link= "https://es.wikipedia.org/wiki/Periodo_parlamentario_2021-2026_del_Congreso_de_la_Rep%C3%BAblica_del_Per%C3%BA#Gabinete_Bellido"
+path="/html/body/div[3]/div[3]/div[5]/div[1]/table[6]"
+dataWS3 = htmltab(link, path)
+head(dataWS3)
+```
+
+```{r}
+library(rvest)
+url="https://www.congreso.gob.pe/?K=113"
+pagina_web=read_html(url)
+```
+
++ Para el nombre
+
+```{r}
+css_name="a.conginfo" 
+name_html <- html_nodes(pagina_web,css_name) 
+name_texto <- html_text(name_html) 
+head(name_texto) #vemos los datos
+```
+
++ Para el cargo
+
+```{r}
+css_cargo="span.partidolist"
+cargo_html <- html_nodes(pagina_web,css_cargo)
+cargo_texto <- html_text(cargo_html)
+head(cargo_texto)
+```
+
+Finalmente, armamos la base de datos
+
+```{r}
+dataWS4 <- data.frame(NOMBRE=name_texto, CARGO=cargo_texto)
+head(dataWS4)
+```
+
+
+
+4.	Importe al menos 3 mapas. Precise el procedimiento realizado y los códigos utilizados (3 puntos)
+
+#VAMOS A UBICAR PRIMERO LOS 3 DRIVES QUE SE CONVERTIRÁN AL FORMATO TOPOJSON 
+
+
+**Paso 1: Descargar el shapefile**
+
+Por lo general usted encontrará los mapas en este formato que contiene muchos archivos. La siguiente página contiene muchos shapefiles del Perú: https://www.geogpsperu.com/
+
+1) Primer mapa, vamos a trabajar con el límite provincial : https://drive.google.com/file/d/1jYrzXC24C0ZRclIT93rW1as4aVhpAw_A/view
+2) Segundo mapa, vamos a trabajar con el límite distrital : https://drive.google.com/file/d/19NlT3dNlPO_ismoXg55rmZdIVT7K4RxY/view
+3) Tercer mapa, vamos a trabajar con las zonas sísmicas: https://onedrive.live.com/?authkey=%21AFGm9oewp15kQoE&cid=A58F6CBEE22ED40F&id=A58F6CBEE22ED40F%217495&parId=A58F6CBEE22ED40F%217492&action=locate
+**Paso 2: Convertirlo en formato topojson**
+
+Para esto iremos al mapshaper(https://mapshaper.org/); desde ahí, se subirán los archivos de la carpeta, simplifíquelo, y luego será exportado como topojson.
+
+**Paso 3: Abrirlo en R**
+
+Luego, de preferencia suba el archivo topojson a Github; guarde el link de descarga del archivo subido; y ábralo en R así (recuerde que utilizará para esto los paquetes sp y rgdal):
+
+```{r}
+library(sp)
+library(rgdal)
+#PRIMER MAPA : PROVINCIAS
+fromGit=("https://github.com/Roli777x/PRACTICA-CALIFICAADA-1-/blob/8a7b5066bb529840c21aa78b469d7be0bb917fe9/PROVINCIAS.json?raw=true") #link desde github
+FirstMap <- rgdal::readOGR(fromGit,stringsAsFactors = FALSE)
+plot(FirstMap)
+```
+
+```{r}
+#sEGUNDO MAPA: 
+fromGit=("https://github.com/Roli777x/PRACTICA-CALIFICAADA-1-/blob/0b0e4ed670f2bf6635075e452acb764e36d88375/DISTRITOS.json?raw=true") #link desde github
+SecondMap <- rgdal::readOGR(fromGit,stringsAsFactors = FALSE)
+plot(SecondMap)
+```
+```{r}
+#Tercer MAPA: 
+fromGit=("https://github.com/Roli777x/PRACTICA-CALIFICAADA-1-/blob/main/zona_sismica_vivienda_ds_003_2016_geogpsperu.json?raw=true") #link desde github
+TercerMap <- rgdal::readOGR(fromGit,stringsAsFactors = FALSE)
+plot(TercerMap)
+```
+
+5.	Busque alguna API de su interés y descargue una base de datos (no puede ser ninguna de las API que hemos ejemplificado en las sesiones) (3 puntos)
+
+# **2. Cargar datos de APIs**
+
+Los APIs significa "Aplication Programming Interface" y se puede entender como un mecanismo que nos permite interactuar con un servidor de internet, y construir pedidos de datos a través de una dirección web, de tal manera que podamos acceder a la información en tiempo real, visualizar el historial y sus actualizaciones.
+
+El siguiente ejemplo es con el portal de datos abiertos de DATOS DEL AGRU RURAL: 
+http://datos.agrorural.gob.pe/developers/
+
+
+**Paso 1: Obtenemos y guardamos nuestro API KEY**
+
+Obtenemos nuestra llave, donde indique el API. En este caso debemos colocar nuestros datos y mail. 
+Guardamos esto en un objeto
+
+```{r}
+miLLAVE="nxAS1B9nLXs7XbpEKPJDygQKYbkGECPEg87kn0Rp"
+```
+
+**Paso 2: Creamos nuestro request**
+
+Seguimos la estructura de request que nos da la API. Vamos a solicitar información para ver el gasto de esta entidad por específica de gasto.
+
+Procedemos entonces a crear nuestro request.
+
+```{r}
+link="http://api.datos.agrorural.gob.pe"
+RQJSON="/api/v2/datastreams/"
+GUID="PLANE-DE-NEGOC-DE-PROYE"
+FORMATO="/data.json/"
+KEY="?auth_key="
+request=paste0(link,RQJSON,GUID,FORMATO,KEY,miLLAVE)
+request
+```
+#Paso 3: Procesamos la respuesta**
+
+La documentación API nos señala que la respuesta será en JSON. Podemos usar este request y aplicar fromJSON.
+
+```{r}
+library(jsonlite) 
+AGRORURAL= fromJSON(request) 
+head(AGRORURAL)
+```
+```
+
